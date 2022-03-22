@@ -20,10 +20,8 @@ class BaseStucture:
     def format(self):
         pack_format = '>'
         for field in self._fields_:
-            if BaseStucture in field[1].__class__.__bases__:
+            if isinstance(field[1], BaseStucture):
                 pack_format += str(field[1].size()) + 's'
-            elif 'si' == field[1]:
-                pack_format += 'c'
             elif '<' in field[1]:
                 pack_format += field[1][1:]
             else:
@@ -33,13 +31,10 @@ class BaseStucture:
     def pack(self):
         values = []
         for field in self._fields_:
-            if BaseStucture in field[1].__class__.__bases__:
+            if isinstance(field[1], BaseStucture):
                 values.append(getattr(self, field[0], 0).pack())
             else:
-                if 'si' == field[1]:
-                    values.append(chr(getattr(self, field[0], 0)))
-                else:
-                    values.append(getattr(self, field[0], 0))
+                values.append(getattr(self, field[0], 0))
         return struct.pack(self.format(), *values)
 
     def unpack(self, buf):
