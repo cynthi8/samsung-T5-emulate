@@ -4,12 +4,13 @@ import datetime
 from USBIP import BaseStucture, USBDevice, InterfaceDescriptor, DeviceConfigurations, EndPoint, USBContainer
 
 
-#data event counter    
-count =0
+# data event counter
+count = 0
 
 # Emulating USB mouse
 
 # HID Configuration
+
 
 class HIDClass(BaseStucture):
     _fields_ = [
@@ -78,69 +79,66 @@ class USBHID(USBDevice):
         arr = [0x05, 0x01,		# Usage Page (Generic Desktop)
                0x09, 0x02,		# Usage (Mouse)
                0xa1, 0x01,		# Collection (Application)
-               0x09, 0x01,		#   Usage (Pointer)
-               0xa1, 0x00,		#   Collection (Physical)
-               0x05, 0x09,		#     Usage Page (Button)
-               0x19, 0x01,		#     Usage Minimum (1)
-               0x29, 0x03,		#     Usage Maximum (3)
-               0x15, 0x00,		#     Logical Minimum (0)
-               0x25, 0x01,		#     Logical Maximum (1)
-               0x95, 0x03,		#     Report Count (3)
-               0x75, 0x01,		#     Report Size (1)
-               0x81, 0x02,		#     Input (Data, Variable, Absolute)
-               0x95, 0x01,		#     Report Count (1)
-               0x75, 0x05,		#     Report Size (5)
-               0x81, 0x01,		#     Input (Constant)
-               0x05, 0x01,		#     Usage Page (Generic Desktop)
-               0x09, 0x30,		#     Usage (X)
-               0x09, 0x31,		#     Usage (Y)
-               0x09, 0x38,		#     Usage (Wheel)
-               0x15, 0x81,		#     Logical Minimum (-0x7f)
-               0x25, 0x7f,		#     Logical Maximum (0x7f)
-               0x75, 0x08,		#     Report Size (8)
-               0x95, 0x03,		#     Report Count (3)
-               0x81, 0x06,		#     Input (Data, Variable, Relative)
-               0xc0,		#   End Collection
+               0x09, 0x01,  # Usage (Pointer)
+               0xa1, 0x00,  # Collection (Physical)
+               0x05, 0x09,  # Usage Page (Button)
+               0x19, 0x01,  # Usage Minimum (1)
+               0x29, 0x03,  # Usage Maximum (3)
+               0x15, 0x00,  # Logical Minimum (0)
+               0x25, 0x01,  # Logical Maximum (1)
+               0x95, 0x03,  # Report Count (3)
+               0x75, 0x01,  # Report Size (1)
+               0x81, 0x02,  # Input (Data, Variable, Absolute)
+               0x95, 0x01,  # Report Count (1)
+               0x75, 0x05,  # Report Size (5)
+               0x81, 0x01,  # Input (Constant)
+               0x05, 0x01,  # Usage Page (Generic Desktop)
+               0x09, 0x30,  # Usage (X)
+               0x09, 0x31,  # Usage (Y)
+               0x09, 0x38,  # Usage (Wheel)
+               0x15, 0x81,  # Logical Minimum (-0x7f)
+               0x25, 0x7f,  # Logical Maximum (0x7f)
+               0x75, 0x08,  # Report Size (8)
+               0x95, 0x03,  # Report Count (3)
+               0x81, 0x06,  # Input (Data, Variable, Relative)
+               0xc0,  # End Collection
                0xc0]		# End Collection
         return_val = ''
         for val in arr:
-            return_val+=chr(val)
+            return_val += chr(val)
         return return_val
 
-    def comp(self,val):
-        if val >= 0: 
-          return val
+    def comp(self, val):
+        if val >= 0:
+            return val
         else:
-          return 256+val
-
-
+            return 256 + val
 
     def handle_data(self, usb_req):
         # Sending random mouse data
         # Send data only for 5 seconds
-        #if (datetime.datetime.now() - self.start_time).seconds < 10:
-         global count
-         if count < 100:
+        # if (datetime.datetime.now() - self.start_time).seconds < 10:
+        global count
+        if count < 100:
             return_val = chr(0x0) + chr(self.comp(random.randint(-5, 5))) + chr(self.comp(random.randint(-5, 5))) + chr(0)
             self.send_usb_req(usb_req, return_val, len(return_val))
             time.sleep(0.05)
-         count=count+1
-
+        count = count + 1
 
     def handle_unknown_control(self, control_req, usb_req):
         if control_req.bmRequestType == 0x81:
             if control_req.bRequest == 0x6:  # Get Descriptor
                 if control_req.wValue == 0x22:  # send initial report
                     print 'send initial report'
-                    ret=self.generate_mouse_report()
+                    ret = self.generate_mouse_report()
                     self.send_usb_req(usb_req, ret, len(ret))
 
         if control_req.bmRequestType == 0x21:  # Host Request
             if control_req.bRequest == 0x0a:  # set idle
                 print 'Idle'
                 # Idle
-                #self.send_ok(usb_req)
-                self.send_usb_req(usb_req,'',0,0);
+                # self.send_ok(usb_req)
+                self.send_usb_req(usb_req, '', 0, 0)
                 pass
 
 

@@ -4,12 +4,13 @@ import datetime
 from USBIP import BaseStucture, USBDevice, InterfaceDescriptor, DeviceConfigurations, EndPoint, USBContainer
 
 
-#data event counter    
-count =0
+# data event counter
+count = 0
 
 # Emulating USB keyboard
 
 # HID Configuration
+
 
 class HIDClass(BaseStucture):
     _fields_ = [
@@ -34,7 +35,7 @@ interface_d = InterfaceDescriptor(bAlternateSetting=0,
                                   bNumEndpoints=1,
                                   bInterfaceClass=3,  # class HID
                                   bInterfaceSubClass=1,
-                                  bInterfaceProtocol=1, #keyboard
+                                  bInterfaceProtocol=1,  # keyboard
                                   iInterface=0)
 
 end_point = EndPoint(bEndpointAddress=0x81,
@@ -75,86 +76,83 @@ class USBHID(USBDevice):
 
     def generate_keyboard_report(self):
 
-        arr = [0x05, 0x01, 
-	       0x09, 0x06,		#Usage Page (Generic Desktop),
-	       0xA1, 0x01,		#Usage (Keyboard),
-	       0x05, 0x07, 		#Collection (Application),
-	       0x19, 0xE0, 		#Usage Page (Key Codes);
-	       0x29, 0xE7, 		#Usage Minimum (224),
-	       0x15, 0x00, 		#Usage Maximum (231),
-	       0x25, 0x01, 		#Logical Minimum (0),
-	       0x75, 0x01, 		#Logical Maximum (1),
-	       0x95, 0x08, 		#Report Size (1),
-	       0x81, 0x02, 		#Report Count (8),
-	       0x95, 0x01, 		#Input (Data, Variable, Absolute),
-	       0x75, 0x08, 		#Report Count (1),
-	       0x81, 0x01, 		#Report Size (8),
-	       0x95, 0x05, 		#Input (Constant),
-	       0x75, 0x01, 		#Report Count (5),
-	       0x05, 0x08, 		#Report Size (1),
-	       0x19, 0x01, 		#Usage Page (Page# for LEDs),
-	       0x29, 0x05, 		#Usage Minimum (1),
-	       0x91, 0x02, 		#Usage Maximum (5),
-	       0x95, 0x01, 		#Output (Data, Variable, Absolute),
-	       0x75, 0x03, 		#Report Count (1),
-	       0x91, 0x01, 		#Report Size (3),
-	       0x95, 0x06, 		#Output (Constant),
-	       0x75, 0x08, 		#Report Count (6),
-	       0x15, 0x00, 		#Report Size (8),
-	       0x25, 0x65, 		#Logical Minimum (0),
-	       0x05, 0x07, 		#Logical Maximum(101),
-	       0x19, 0x00, 		#Usage Page (Key Codes),
-	       0x29, 0x65, 		#Usage Minimum (0),
-	       0x81, 0x00, 		#Usage Maximum (101), #Input (Data, Array),
-	       0xC0]  			#End Collection 
+        arr = [0x05, 0x01,
+               0x09, 0x06,  # Usage Page (Generic Desktop),
+               0xA1, 0x01,  # Usage (Keyboard),
+               0x05, 0x07,  # Collection (Application),
+               0x19, 0xE0,  # Usage Page (Key Codes);
+               0x29, 0xE7,  # Usage Minimum (224),
+               0x15, 0x00,  # Usage Maximum (231),
+               0x25, 0x01,  # Logical Minimum (0),
+               0x75, 0x01,  # Logical Maximum (1),
+               0x95, 0x08,  # Report Size (1),
+               0x81, 0x02,  # Report Count (8),
+               0x95, 0x01,  # Input (Data, Variable, Absolute),
+               0x75, 0x08,  # Report Count (1),
+               0x81, 0x01,  # Report Size (8),
+               0x95, 0x05,  # Input (Constant),
+               0x75, 0x01,  # Report Count (5),
+               0x05, 0x08,  # Report Size (1),
+               0x19, 0x01,  # Usage Page (Page# for LEDs),
+               0x29, 0x05,  # Usage Minimum (1),
+               0x91, 0x02,  # Usage Maximum (5),
+               0x95, 0x01,  # Output (Data, Variable, Absolute),
+               0x75, 0x03,  # Report Count (1),
+               0x91, 0x01,  # Report Size (3),
+               0x95, 0x06,  # Output (Constant),
+               0x75, 0x08,  # Report Count (6),
+               0x15, 0x00,  # Report Size (8),
+               0x25, 0x65,  # Logical Minimum (0),
+               0x05, 0x07,  # Logical Maximum(101),
+               0x19, 0x00,  # Usage Page (Key Codes),
+               0x29, 0x65,  # Usage Minimum (0),
+               0x81, 0x00,  # Usage Maximum (101), #Input (Data, Array),
+               0xC0]  # End Collection
         return_val = ''
         for val in arr:
-            return_val+=chr(val)
+            return_val += chr(val)
         return return_val
 
-    def comp(self,val):
-        if val >= 0: 
-          return val
+    def comp(self, val):
+        if val >= 0:
+            return val
         else:
-          return 256+val
-
-
+            return 256 + val
 
     def handle_data(self, usb_req):
         # Sending random keyboard data
         # Send data only for 5 seconds
-        #if (datetime.datetime.now() - self.start_time).seconds < 10:
-	 print "handle data"
-         global count
-         if count < 100:
+        # if (datetime.datetime.now() - self.start_time).seconds < 10:
+        print "handle data"
+        global count
+        if count < 100:
             if (count % 2) == 0:
-               return_val = "\x00\x00" + str(chr(random.randint(4,29))) + "\x00\x00\x00\x00\x00"
-            else: 
-               return_val = "\x00\x00\x00\x00\x00\x00\x00\x00" 
+                return_val = "\x00\x00" + str(chr(random.randint(4, 29))) + "\x00\x00\x00\x00\x00"
+            else:
+                return_val = "\x00\x00\x00\x00\x00\x00\x00\x00"
             self.send_usb_req(usb_req, return_val, len(return_val))
-         time.sleep(0.05)
-         count=count+1
-
+        time.sleep(0.05)
+        count = count + 1
 
     def handle_unknown_control(self, control_req, usb_req):
         if control_req.bmRequestType == 0x81:
             if control_req.bRequest == 0x6:  # Get Descriptor
                 if control_req.wValue == 0x22:  # send initial report
                     print 'send initial report'
-                    ret=self.generate_keyboard_report()
+                    ret = self.generate_keyboard_report()
                     self.send_usb_req(usb_req, ret, len(ret))
 
         if control_req.bmRequestType == 0x21:  # Host Request
             if control_req.bRequest == 0x0a:  # set idle
                 print 'Idle'
                 # Idle
-                self.send_usb_req(usb_req, '', 0,0)
+                self.send_usb_req(usb_req, '', 0, 0)
                 pass
             if control_req.bRequest == 0x09:  # set report
                 print 'set report'
                 data = usb_container.usb_devices[0].connection.recv(control_req.wLength)
-                #use data ? 
-                self.send_usb_req(usb_req, '', 0,0)
+                # use data ?
+                self.send_usb_req(usb_req, '', 0, 0)
                 pass
 
 
