@@ -12,22 +12,22 @@ count = 0
 # HID Configuration
 
 
-class HIDClass(BaseStucture):
+class HIDDescriptor(BaseStucture):
     _fields_ = [
         ('bLength', 'B', 9),
         ('bDescriptorType', 'B', 0x21),  # HID
         ('bcdHID', 'H'),
         ('bCountryCode', 'B'),
         ('bNumDescriptors', 'B'),
-        ('bDescriptprType2', 'B'),
+        ('bDescriptorType1', 'B'),
         ('wDescriptionLength', 'H'),
     ]
 
 
-hid_class = HIDClass(bcdHID=0x0100,  # Mouse
+hid_descriptor = HIDDescriptor(bcdHID=0x0100,  # Mouse
                      bCountryCode=0x0,
                      bNumDescriptors=0x1,
-                     bDescriptprType2=0x22,  # Report
+                     bDescriptorType1=0x22,  # Report
                      wDescriptionLength=0x3400)  # Little endian
 
 
@@ -47,8 +47,8 @@ mouse_device_descriptor = DeviceDescriptor(bDeviceClass=0x0,
                                            bDeviceSubClass=0x0,
                                            bDeviceProtocol=0x0,
                                            bMaxPacketSize0=0x8,
-                                           vendorID=0x0627,
-                                           productID=0x0,
+                                           idVendor=0x0627,
+                                           idProduct=0x0,
                                            bcdDevice=0x0,
                                            bNumConfigurations=1)
 
@@ -59,7 +59,7 @@ configuration = DeviceConfiguration(wTotalLength=0x2200,
                                     bmAttributes=0x80,  # valid self powered
                                     bMaxPower=50)  # 100 mA current
 
-interface_d.descriptions = [hid_class]  # Supports only one description
+interface_d.class_descriptor = hid_descriptor
 interface_d.endpoints = [end_point]  # Supports only one endpoint
 configuration.interfaces = [interface_d]   # Supports only one interface
 
