@@ -240,6 +240,8 @@ class USBDevice(ABC):
             all_configurations.extend(configuration.pack())
             for interface in configuration.interfaces:
                 all_configurations.extend(interface.pack())
+                if hasattr(interface, 'class_descriptor'):
+                    all_configurations.extend(interface.class_descriptor.pack())
                 for endpoint in interface.endpoints:
                     all_configurations.extend(endpoint.pack())
         self.all_configurations = all_configurations
@@ -305,7 +307,6 @@ class USBDevice(ABC):
         if usb_req.ep == 0:
             self.handle_usb_control(usb_req)
         else:
-            print('Request to handle data')
             self.handle_data(usb_req)
 
     @abstractmethod
@@ -332,8 +333,8 @@ class USBContainer:
                              busnum=1,
                              devnum=2,
                              speed=2,
-                             idVendor=device_descriptor.vendorID,
-                             idProduct=device_descriptor.productID,
+                             idVendor=device_descriptor.idVendor,
+                             idProduct=device_descriptor.idProduct,
                              bcdDevice=device_descriptor.bcdDevice,
                              bDeviceClass=device_descriptor.bDeviceClass,
                              bDeviceSubClass=device_descriptor.bDeviceSubClass,
@@ -352,8 +353,8 @@ class USBContainer:
                               busnum=1,
                               devnum=2,
                               speed=2,
-                              idVendor=device_descriptor.vendorID,
-                              idProduct=device_descriptor.productID,
+                              idVendor=device_descriptor.idVendor,
+                              idProduct=device_descriptor.idProduct,
                               bcdDevice=device_descriptor.bcdDevice,
                               bDeviceClass=device_descriptor.bDeviceClass,
                               bDeviceSubClass=device_descriptor.bDeviceSubClass,
