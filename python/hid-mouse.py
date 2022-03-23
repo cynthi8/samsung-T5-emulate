@@ -103,10 +103,7 @@ class USBHID(USBDevice):
                0x81, 0x06,  # Input (Data, Variable, Relative)
                0xc0,  # End Collection
                0xc0]		# End Collection
-        return_val = ''
-        for val in arr:
-            return_val += chr(val)
-        return return_val
+        return bytearray(arr)
 
     def comp(self, val):
         if val >= 0:
@@ -120,8 +117,9 @@ class USBHID(USBDevice):
         # if (datetime.datetime.now() - self.start_time).seconds < 10:
         global count
         if count < 100:
-            return_val = chr(0x0) + chr(self.comp(random.randint(-5, 5))) + chr(self.comp(random.randint(-5, 5))) + chr(0)
-            self.send_usb_req(usb_req, return_val, len(return_val))
+            mouse_data = [0x0, self.comp(random.randint(-5, 5)), self.comp(random.randint(-5, 5)), 0]
+            ret = bytearray(mouse_data)
+            self.send_usb_ret(usb_req, ret, len(ret))
             time.sleep(0.05)
         count = count + 1
 
@@ -131,14 +129,14 @@ class USBHID(USBDevice):
                 if control_req.wValue == 0x22:  # send initial report
                     print('send initial report')
                     ret = self.generate_mouse_report()
-                    self.send_usb_req(usb_req, ret, len(ret))
+                    self.send_usb_ret(usb_req, ret, len(ret))
 
         if control_req.bmRequestType == 0x21:  # Host Request
             if control_req.bRequest == 0x0a:  # set idle
                 print('Idle')
                 # Idle
                 # self.send_ok(usb_req)
-                self.send_usb_req(usb_req, '', 0, 0)
+                self.send_usb_ret(usb_req, b'', 0, 0)
                 pass
 
 
