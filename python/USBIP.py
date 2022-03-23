@@ -1,5 +1,6 @@
 import socket
 import struct
+from abc import ABC, abstractmethod
 
 
 class BaseStucture:
@@ -166,23 +167,23 @@ class DeviceDescriptor(BaseStucture):
         ('idVendor', 'H'),
         ('idProduct', 'H'),
         ('bcdDevice', 'H'),
-        ('iManufacturer', 'B'),
-        ('iProduct', 'B'),
-        ('iSerialNumber', 'B'),
+        ('iManufacturer', 'B', 0),
+        ('iProduct', 'B', 0),
+        ('iSerialNumber', 'B', 0),
         ('bNumConfigurations', 'B')
     ]
 
 
-class DeviceConfigurations(BaseStucture):
+class DeviceConfiguration(BaseStucture):
     _fields_ = [
         ('bLength', 'B', 9),
         ('bDescriptorType', 'B', 2),
-        ('wTotalLength', 'H', 0x2200),
-        ('bNumInterfaces', 'B', 1),
+        ('wTotalLength', 'H'),
+        ('bNumInterfaces', 'B'),
         ('bConfigurationValue', 'B', 1),
         ('iConfiguration', 'B', 0),
         ('bmAttributes', 'B', 0x80),
-        ('bMaxPower', 'B', 0x32)
+        ('bMaxPower', 'B')
     ]
 
 
@@ -217,29 +218,31 @@ class USBRequest():
             setattr(self, key, value)
 
 
-class USBDevice():
-    '''interfaces = [USBInterface(bInterfaceClass=0x3, bInterfaceSubClass=0x0, bInterfaceProtocol=0x0)]
-    speed=2
-    speed = 2
-    vendorID = 0xc410
-    productID = 0x0
-    bcdDevice = 0x0
-    bDeviceClass = 0x0
-    bDeviceSubClass = 0x0
-    bDeviceProtocol = 0x0
-    bNumConfigurations = 1
-    bConfigurationValue = 1
-    bNumInterfaces = 1'''
+class USBDevice(ABC):
+    '''
+    Abstract Base Class
+    '''
+
+    @property
+    @abstractmethod
+    def configurations(self): pass
+
+    @property
+    @abstractmethod
+    def device_descriptor(self): pass
 
     def __init__(self):
         self.generate_raw_configuration()
 
     def generate_raw_configuration(self):
-        str = self.configurations[0].pack()
-        str += self.configurations[0].interfaces[0].pack()
-        str += self.configurations[0].interfaces[0].descriptions[0].pack()
-        str += self.configurations[0].interfaces[0].endpoints[0].pack()
-        self.all_configurations = str
+        all_configurations = bytearray()
+        for configuration in self.configurations:
+            all_configurations.extend(configuration.pack())
+            for interface in configuration.interfaces:
+                all_configurations.extend(interface.pack())
+                for endpoint in interface.endpoints:
+                    all_configurations.extend(endpoint.pack())
+        self.all_configurations = all_configurations
 
     def send_usb_ret(self, usb_req, usb_res, usb_len, status=0):
         self.connection.sendall(USBIP_RET_Submit(command=0x3,
@@ -257,23 +260,12 @@ class USBDevice():
         print(f"handle_get_descriptor {control_req.wValue:n}")
         if control_req.wValue == 0x1:  # Device
             handled = True
-            ret = DeviceDescriptor(bDeviceClass=self.bDeviceClass,
-                                   bDeviceSubClass=self.bDeviceSubClass,
-                                   bDeviceProtocol=self.bDeviceProtocol,
-                                   bMaxPacketSize0=0x8,
-                                   idVendor=self.vendorID,
-                                   idProduct=self.productID,
-                                   bcdDevice=self.bcdDevice,
-                                   iManufacturer=0,
-                                   iProduct=0,
-                                   iSerialNumber=0,
-                                   bNumConfigurations=1).pack()
+            ret = self.device_descriptor.pack()
             self.send_usb_ret(usb_req, ret, len(ret))
         elif control_req.wValue == 0x2:  # configuration
             handled = True
             ret = self.all_configurations[:control_req.wLength]
             self.send_usb_ret(usb_req, ret, len(ret))
-
         elif control_req.wValue == 0xA:  # config status ???
             handled = True
             self.send_usb_ret(usb_req, b'', 0, 1)
@@ -281,11 +273,10 @@ class USBDevice():
         return handled
 
     def handle_set_configuration(self, control_req, usb_req):
-        handled = False
+        # Only supports 1 configuration
         print(f"handle_set_configuration {control_req.wValue:n}")
-        handled = True
         self.send_usb_ret(usb_req, b'', 0, 0)
-        return handled
+        return True
 
     def handle_usb_control(self, usb_req):
         control_req = StandardDeviceRequest()
@@ -314,7 +305,16 @@ class USBDevice():
         if usb_req.ep == 0:
             self.handle_usb_control(usb_req)
         else:
+            print('Request to handle data')
             self.handle_data(usb_req)
+
+    @abstractmethod
+    def handle_data(self, usb_req):
+        pass
+
+    @abstractmethod
+    def handle_unknown_control(self, usb_req):
+        pass
 
 
 class USBContainer:
@@ -325,24 +325,26 @@ class USBContainer:
 
     def handle_attach(self):
         usb_dev = self.usb_devices[0]
+        device_descriptor = usb_dev.device_descriptor
         return OP_REP_Import(base=USBIPHeader(command=3, status=0),
                              usbPath='/sys/devices/pci0000:00/0000:00:01.2/usb1/1-1'.encode('ascii'),
                              busID='1-1'.encode('ascii'),
                              busnum=1,
                              devnum=2,
                              speed=2,
-                             idVendor=usb_dev.vendorID,
-                             idProduct=usb_dev.productID,
-                             bcdDevice=usb_dev.bcdDevice,
-                             bDeviceClass=usb_dev.bDeviceClass,
-                             bDeviceSubClass=usb_dev.bDeviceSubClass,
-                             bDeviceProtocol=usb_dev.bDeviceProtocol,
-                             bNumConfigurations=usb_dev.bNumConfigurations,
-                             bConfigurationValue=usb_dev.bConfigurationValue,
-                             bNumInterfaces=usb_dev.bNumInterfaces)
+                             idVendor=device_descriptor.vendorID,
+                             idProduct=device_descriptor.productID,
+                             bcdDevice=device_descriptor.bcdDevice,
+                             bDeviceClass=device_descriptor.bDeviceClass,
+                             bDeviceSubClass=device_descriptor.bDeviceSubClass,
+                             bDeviceProtocol=device_descriptor.bDeviceProtocol,
+                             bConfigurationValue=usb_dev.configurations[0].bConfigurationValue,
+                             bNumConfigurations=device_descriptor.bNumConfigurations,
+                             bNumInterfaces=usb_dev.configurations[0].bNumInterfaces)
 
     def handle_device_list(self):
         usb_dev = self.usb_devices[0]
+        device_descriptor = usb_dev.device_descriptor
         return OP_REP_DevList(base=USBIPHeader(command=5, status=0),
                               nExportedDevice=1,
                               usbPath='/sys/devices/pci0000:00/0000:00:01.2/usb1/1-1'.encode('ascii'),
@@ -350,15 +352,15 @@ class USBContainer:
                               busnum=1,
                               devnum=2,
                               speed=2,
-                              idVendor=usb_dev.vendorID,
-                              idProduct=usb_dev.productID,
-                              bcdDevice=usb_dev.bcdDevice,
-                              bDeviceClass=usb_dev.bDeviceClass,
-                              bDeviceSubClass=usb_dev.bDeviceSubClass,
-                              bDeviceProtocol=usb_dev.bDeviceProtocol,
-                              bNumConfigurations=usb_dev.bNumConfigurations,
-                              bConfigurationValue=usb_dev.bConfigurationValue,
-                              bNumInterfaces=usb_dev.bNumInterfaces,
+                              idVendor=device_descriptor.vendorID,
+                              idProduct=device_descriptor.productID,
+                              bcdDevice=device_descriptor.bcdDevice,
+                              bDeviceClass=device_descriptor.bDeviceClass,
+                              bDeviceSubClass=device_descriptor.bDeviceSubClass,
+                              bDeviceProtocol=device_descriptor.bDeviceProtocol,
+                              bConfigurationValue=usb_dev.configurations[0].bConfigurationValue,
+                              bNumConfigurations=device_descriptor.bNumConfigurations,
+                              bNumInterfaces=usb_dev.configurations[0].bNumInterfaces,
                               interfaces=USBInterface(bInterfaceClass=usb_dev.configurations[0].interfaces[0].bInterfaceClass,
                                                       bInterfaceSubClass=usb_dev.configurations[0].interfaces[0].bInterfaceSubClass,
                                                       bInterfaceProtocol=usb_dev.configurations[0].interfaces[0].bInterfaceProtocol))

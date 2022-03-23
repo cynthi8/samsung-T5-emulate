@@ -1,7 +1,7 @@
 import time
 import random
 import datetime
-from USBIP import BaseStucture, USBDevice, InterfaceDescriptor, DeviceConfigurations, EndPoint, USBContainer
+from USBIP import BaseStucture, USBDevice, InterfaceDescriptor, DeviceDescriptor, DeviceConfiguration, EndPoint, USBContainer
 
 
 # data event counter
@@ -43,13 +43,21 @@ end_point = EndPoint(bEndpointAddress=0x81,
                      wMaxPacketSize=0x0800,  # Little endian
                      bInterval=0xFF)  # interval to report
 
+mouse_device_descriptor = DeviceDescriptor(bDeviceClass=0x0,
+                                           bDeviceSubClass=0x0,
+                                           bDeviceProtocol=0x0,
+                                           bMaxPacketSize0=0x8,
+                                           vendorID=0x0627,
+                                           productID=0x0,
+                                           bcdDevice=0x0,
+                                           bNumConfigurations=1)
 
-configuration = DeviceConfigurations(wTotalLength=0x2200,
-                                     bNumInterfaces=0x1,
-                                     bConfigurationValue=0x1,
-                                     iConfiguration=0x0,  # No string
-                                     bmAttributes=0x80,  # valid self powered
-                                     bMaxPower=50)  # 100 mah current
+configuration = DeviceConfiguration(wTotalLength=0x2200,
+                                    bNumInterfaces=0x1,
+                                    bConfigurationValue=1,
+                                    iConfiguration=0x0,  # No string
+                                    bmAttributes=0x80,  # valid self powered
+                                    bMaxPower=50)  # 100 mA current
 
 interface_d.descriptions = [hid_class]  # Supports only one description
 interface_d.endpoints = [end_point]  # Supports only one endpoint
@@ -57,18 +65,8 @@ configuration.interfaces = [interface_d]   # Supports only one interface
 
 
 class USBHID(USBDevice):
-    vendorID = 0x0627
-    productID = 0x0
-    bcdDevice = 0x0
-    bcdUSB = 0x0
-    bNumConfigurations = 0x1
-    bNumInterfaces = 0x1
-    bConfigurationValue = 0x1
-    configurations = []
-    bDeviceClass = 0x0
-    bDeviceSubClass = 0x0
-    bDeviceProtocol = 0x0
     configurations = [configuration]  # Supports only one configuration
+    device_descriptor = mouse_device_descriptor
 
     def __init__(self):
         USBDevice.__init__(self)
@@ -140,9 +138,9 @@ class USBHID(USBDevice):
                 pass
 
 
-usb_Dev = USBHID()
+usb_dev = USBHID()
 usb_container = USBContainer()
-usb_container.add_usb_device(usb_Dev)  # Supports only one device!
+usb_container.add_usb_device(usb_dev)  # Supports only one device!
 usb_container.run()
 
 # Run in cmd: usbip.exe -a 127.0.0.1 "1-1"
