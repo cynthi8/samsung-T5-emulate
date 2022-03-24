@@ -239,11 +239,14 @@ class USBDevice(ABC):
         for configuration in self.configurations:
             all_configurations.extend(configuration.pack())
             for interface in configuration.interfaces:
-                all_configurations.extend(interface.pack())
-                if hasattr(interface, 'class_descriptor'):
-                    all_configurations.extend(interface.class_descriptor.pack())
-                for endpoint in interface.endpoints:
-                    all_configurations.extend(endpoint.pack())
+                for interface_alternative in interface:
+                    all_configurations.extend(interface_alternative.pack())
+                    if hasattr(interface_alternative, 'class_descriptor'):
+                        all_configurations.extend(interface_alternative.class_descriptor.pack())
+                    for endpoint in interface_alternative.endpoints:
+                        all_configurations.extend(endpoint.pack())
+                        if hasattr(endpoint, 'class_descriptor'):
+                            all_configurations.extend(endpoint.class_descriptor.pack())
         self.all_configurations = all_configurations
 
     def send_usb_ret(self, usb_req, usb_res, usb_len, status=0):
@@ -362,9 +365,9 @@ class USBContainer:
                               bConfigurationValue=usb_dev.configurations[0].bConfigurationValue,
                               bNumConfigurations=device_descriptor.bNumConfigurations,
                               bNumInterfaces=usb_dev.configurations[0].bNumInterfaces,
-                              interfaces=USBInterface(bInterfaceClass=usb_dev.configurations[0].interfaces[0].bInterfaceClass,
-                                                      bInterfaceSubClass=usb_dev.configurations[0].interfaces[0].bInterfaceSubClass,
-                                                      bInterfaceProtocol=usb_dev.configurations[0].interfaces[0].bInterfaceProtocol))
+                              interfaces=USBInterface(bInterfaceClass=usb_dev.configurations[0].interfaces[0][0].bInterfaceClass,
+                                                      bInterfaceSubClass=usb_dev.configurations[0].interfaces[0][0].bInterfaceSubClass,
+                                                      bInterfaceProtocol=usb_dev.configurations[0].interfaces[0][0].bInterfaceProtocol))
 
     def run(self, ip='0.0.0.0', port=3240):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

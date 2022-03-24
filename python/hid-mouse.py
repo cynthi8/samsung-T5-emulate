@@ -61,7 +61,8 @@ configuration = DeviceConfiguration(wTotalLength=0x2200,
 
 interface_d.class_descriptor = hid_descriptor
 interface_d.endpoints = [end_point]  # Supports only one endpoint
-configuration.interfaces = [interface_d]   # Supports only one interface
+interface = [interface_d] # List of interface alternatives
+configuration.interfaces = [interface]   # Supports only one interface
 
 
 class USBHID(USBDevice):
