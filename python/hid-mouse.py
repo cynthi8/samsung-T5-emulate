@@ -1,7 +1,7 @@
 import time
 import random
 import datetime
-from USBIP import BaseStucture, USBDevice, InterfaceDescriptor, DeviceDescriptor, DeviceConfiguration, EndPoint, USBContainer
+from USBIP import BaseStructure, USBDevice, InterfaceDescriptor, DeviceDescriptor, DeviceConfiguration, EndPoint, USBContainer
 
 
 # data event counter
@@ -12,7 +12,7 @@ count = 0
 # HID Configuration
 
 
-class HIDDescriptor(BaseStucture):
+class HIDDescriptor(BaseStructure):
     _fields_ = [
         ('bLength', 'B', 9),
         ('bDescriptorType', 'B', 0x21),  # HID

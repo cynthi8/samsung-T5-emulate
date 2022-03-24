@@ -3,7 +3,7 @@ import struct
 from abc import ABC, abstractmethod
 
 
-class BaseStucture:
+class BaseStructure:
     def __init__(self, **kwargs):
         self.init_from_dict(**kwargs)
         for field in self._fields_:
@@ -21,7 +21,7 @@ class BaseStucture:
     def format(self):
         pack_format = '>'
         for field in self._fields_:
-            if isinstance(field[1], BaseStucture):
+            if isinstance(field[1], BaseStructure):
                 pack_format += str(field[1].size()) + 's'
             elif '<' in field[1]:
                 pack_format += field[1][1:]
@@ -32,7 +32,7 @@ class BaseStucture:
     def pack(self):
         values = []
         for field in self._fields_:
-            if isinstance(field[1], BaseStucture):
+            if isinstance(field[1], BaseStructure):
                 values.append(getattr(self, field[0], 0).pack())
             else:
                 values.append(getattr(self, field[0], 0))
@@ -49,7 +49,7 @@ class BaseStucture:
         self.init_from_dict(**keys_vals)
 
 
-class USBIPHeader(BaseStucture):
+class USBIPHeader(BaseStructure):
     _fields_ = [
         ('version', 'H', 0x0111),  # USB/IP version 1.1.1
         ('command', 'H'),
@@ -57,7 +57,7 @@ class USBIPHeader(BaseStucture):
     ]
 
 
-class USBInterface(BaseStucture):
+class USBInterface(BaseStructure):
     _fields_ = [
         ('bInterfaceClass', 'B'),
         ('bInterfaceSubClass', 'B'),
@@ -66,7 +66,7 @@ class USBInterface(BaseStucture):
     ]
 
 
-class OP_REP_DevList(BaseStucture):
+class OP_REP_DevList(BaseStructure):
     _fields_ = [
         ('base', USBIPHeader()),
         ('nExportedDevice', 'I'),
@@ -88,7 +88,7 @@ class OP_REP_DevList(BaseStucture):
     ]
 
 
-class OP_REP_Import(BaseStucture):
+class OP_REP_Import(BaseStructure):
     _fields_ = [
         ('base', USBIPHeader()),
         ('usbPath', '256s'),
@@ -108,7 +108,7 @@ class OP_REP_Import(BaseStucture):
     ]
 
 
-class USBIP_RET_Submit(BaseStucture):
+class USBIP_RET_Submit(BaseStructure):
     _fields_ = [
         ('command', 'I'),
         ('seqnum', 'I'),
@@ -124,12 +124,12 @@ class USBIP_RET_Submit(BaseStucture):
     ]
 
     def pack(self):
-        packed_data = BaseStucture.pack(self)
+        packed_data = BaseStructure.pack(self)
         packed_data += self.data
         return packed_data
 
 
-class USBIP_CMD_Submit(BaseStucture):
+class USBIP_CMD_Submit(BaseStructure):
     _fields_ = [
         ('command', 'I'),
         ('seqnum', 'I'),
@@ -145,7 +145,7 @@ class USBIP_CMD_Submit(BaseStucture):
     ]
 
 
-class StandardDeviceRequest(BaseStucture):
+class StandardDeviceRequest(BaseStructure):
     _fields_ = [
         ('bmRequestType', 'B'),
         ('bRequest', 'B'),
@@ -155,7 +155,7 @@ class StandardDeviceRequest(BaseStucture):
     ]
 
 
-class DeviceDescriptor(BaseStucture):
+class DeviceDescriptor(BaseStructure):
     _fields_ = [
         ('bLength', 'B', 18),
         ('bDescriptorType', 'B', 1),
@@ -174,7 +174,7 @@ class DeviceDescriptor(BaseStucture):
     ]
 
 
-class DeviceConfiguration(BaseStucture):
+class DeviceConfiguration(BaseStructure):
     _fields_ = [
         ('bLength', 'B', 9),
         ('bDescriptorType', 'B', 2),
@@ -187,28 +187,28 @@ class DeviceConfiguration(BaseStucture):
     ]
 
 
-class InterfaceDescriptor(BaseStucture):
+class InterfaceDescriptor(BaseStructure):
     _fields_ = [
         ('bLength', 'B', 9),
         ('bDescriptorType', 'B', 4),
         ('bInterfaceNumber', 'B', 0),
         ('bAlternateSetting', 'B', 0),
         ('bNumEndpoints', 'B', 1),
-        ('bInterfaceClass', 'B', 3),
-        ('bInterfaceSubClass', 'B', 1),
-        ('bInterfaceProtocol', 'B', 2),
+        ('bInterfaceClass', 'B'),
+        ('bInterfaceSubClass', 'B'),
+        ('bInterfaceProtocol', 'B'),
         ('iInterface', 'B', 0)
     ]
 
 
-class EndPoint(BaseStucture):
+class EndPoint(BaseStructure):
     _fields_ = [
         ('bLength', 'B', 7),
         ('bDescriptorType', 'B', 0x5),
-        ('bEndpointAddress', 'B', 0x81),
-        ('bmAttributes', 'B', 0x3),
-        ('wMaxPacketSize', 'H', 0x8000),
-        ('bInterval', 'B', 0x0A)
+        ('bEndpointAddress', 'B'),
+        ('bmAttributes', 'B'),
+        ('wMaxPacketSize', 'H'),
+        ('bInterval', 'B')
     ]
 
 
