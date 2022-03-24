@@ -201,7 +201,7 @@ class InterfaceDescriptor(BaseStructure):
     ]
 
 
-class EndPoint(BaseStructure):
+class EndpointDescriptor(BaseStructure):
     _fields_ = [
         ('bLength', 'B', 7),
         ('bDescriptorType', 'B', 0x5),
@@ -263,17 +263,14 @@ class USBDevice(ABC):
     def handle_get_descriptor(self, control_req, usb_req):
         handled = False
         print(f"handle_get_descriptor {control_req.wValue:n}")
-        if control_req.wValue == 0x1:  # Device
+        if control_req.wValue == 0x01:  # Device Descriptor
             handled = True
             ret = self.device_descriptor.pack()
             self.send_usb_ret(usb_req, ret, len(ret))
-        elif control_req.wValue == 0x2:  # configuration
+        elif control_req.wValue == 0x02:  # Configuration Descriptor
             handled = True
             ret = self.all_configurations[:control_req.wLength]
             self.send_usb_ret(usb_req, ret, len(ret))
-        elif control_req.wValue == 0xA:  # config status ???
-            handled = True
-            self.send_usb_ret(usb_req, b'', 0, 1)
 
         return handled
 
@@ -292,22 +289,27 @@ class USBDevice(ABC):
         print(f"  UC Value  {control_req.wValue}")
         print(f"  UC Index  {control_req.wIndex}")
         print(f"  UC Length {control_req.wLength}")
-        if control_req.bmRequestType == 0x80:  # Host Request
-            if control_req.bRequest == 0x06:  # Get Descriptor
-                handled = self.handle_get_descriptor(control_req, usb_req)
-            if control_req.bRequest == 0x00:  # Get STATUS
-                self.send_usb_ret(usb_req, "\x01\x00", 2)
+        if control_req.bmRequestType == 0x80:  # Data flows IN, from Device to Host
+            if control_req.bRequest == 0x00:  # GET_STATUS
+                attributes = self.configurations[0].bmAttributes
+                is_self_powered = attributes & (1 << 6)
+                is_remote_wakeup = attributes & (1 << 5)
+                ret = 0x0000 | (is_remote_wakeup << 1) | (is_self_powered)
+                self.send_usb_ret(usb_req, ret, 2)
                 handled = True
 
-        if control_req.bmRequestType == 0x00:  # Host Request
+            elif control_req.bRequest == 0x06:  # GET_DESCRIPTOR
+                handled = self.handle_get_descriptor(control_req, usb_req)
+
+        elif control_req.bmRequestType == 0x00:  # Data flows OUT, from Host to Device
             if control_req.bRequest == 0x09:  # Set Configuration
                 handled = self.handle_set_configuration(control_req, usb_req)
 
         if not handled:
-            self.handle_unknown_control(control_req, usb_req)
+            self.handle_device_specific_control(control_req, usb_req)
 
     def handle_usb_request(self, usb_req):
-        if usb_req.ep == 0:
+        if usb_req.ep == 0:  # Endpoint 0 is always the control endpoint
             self.handle_usb_control(usb_req)
         else:
             self.handle_data(usb_req)
@@ -317,7 +319,7 @@ class USBDevice(ABC):
         pass
 
     @abstractmethod
-    def handle_unknown_control(self, usb_req):
+    def handle_device_specific_control(self, usb_req):
         pass
 
 

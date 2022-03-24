@@ -1,4 +1,4 @@
-from USBIP import BaseStructure, USBDevice, InterfaceDescriptor, DeviceDescriptor, DeviceConfiguration, EndPoint, USBContainer
+from USBIP import BaseStructure, USBDevice, InterfaceDescriptor, DeviceDescriptor, DeviceConfiguration, EndpointDescriptor, USBContainer
 
 
 samsung_T5_device_descriptor = DeviceDescriptor(bDeviceClass=0x0,
@@ -28,8 +28,8 @@ samsung_T5_interface_descriptor_BOT = InterfaceDescriptor(bAlternateSetting=0,
                                                           bInterfaceProtocol=0x50,  # BOT
                                                           iInterface=0)
 samsung_T5_interface_descriptor_BOT.endpoints = []
-samsung_T5_interface_descriptor_BOT.endpoints.append(EndPoint(bEndpointAddress=0x81, bmAttributes=0x02, wMaxPacketSize=512, bInterval=0))
-samsung_T5_interface_descriptor_BOT.endpoints.append(EndPoint(bEndpointAddress=0x02, bmAttributes=0x02, wMaxPacketSize=512, bInterval=0))
+samsung_T5_interface_descriptor_BOT.endpoints.append(EndpointDescriptor(bEndpointAddress=0x81, bmAttributes=0x02, wMaxPacketSize=512, bInterval=0))
+samsung_T5_interface_descriptor_BOT.endpoints.append(EndpointDescriptor(bEndpointAddress=0x02, bmAttributes=0x02, wMaxPacketSize=512, bInterval=0))
 
 # UAS - USB Attached SCSI
 samsung_T5_interface_descriptor_UAS = InterfaceDescriptor(bAlternateSetting=1,
@@ -52,13 +52,13 @@ class PipeUsageClassSpecificDescriptor(BaseStructure):
     ]
 
 
-UAS_endpoint_0 = EndPoint(bEndpointAddress=0x81, bmAttributes=0x02, wMaxPacketSize=512, bInterval=0)
+UAS_endpoint_0 = EndpointDescriptor(bEndpointAddress=0x81, bmAttributes=0x02, wMaxPacketSize=512, bInterval=0)
 UAS_endpoint_0.class_descriptor = PipeUsageClassSpecificDescriptor(bValue=0x0003)
-UAS_endpoint_1 = EndPoint(bEndpointAddress=0x02, bmAttributes=0x02, wMaxPacketSize=512, bInterval=0)
+UAS_endpoint_1 = EndpointDescriptor(bEndpointAddress=0x02, bmAttributes=0x02, wMaxPacketSize=512, bInterval=0)
 UAS_endpoint_1.class_descriptor = PipeUsageClassSpecificDescriptor(bValue=0x0004)
-UAS_endpoint_2 = EndPoint(bEndpointAddress=0x83, bmAttributes=0x02, wMaxPacketSize=512, bInterval=0)
+UAS_endpoint_2 = EndpointDescriptor(bEndpointAddress=0x83, bmAttributes=0x02, wMaxPacketSize=512, bInterval=0)
 UAS_endpoint_2.class_descriptor = PipeUsageClassSpecificDescriptor(bValue=0x0002)
-UAS_endpoint_3 = EndPoint(bEndpointAddress=0x04, bmAttributes=0x02, wMaxPacketSize=512, bInterval=0)
+UAS_endpoint_3 = EndpointDescriptor(bEndpointAddress=0x04, bmAttributes=0x02, wMaxPacketSize=512, bInterval=0)
 UAS_endpoint_3.class_descriptor = PipeUsageClassSpecificDescriptor(bValue=0x0001)
 samsung_T5_interface_descriptor_UAS.endpoints = [UAS_endpoint_0, UAS_endpoint_1, UAS_endpoint_2, UAS_endpoint_3]
 
@@ -77,7 +77,7 @@ class SamsungT5(USBDevice):
         raise(NotImplementedError)
         self.send_usb_ret(usb_req, ret, len(ret))
 
-    def handle_unknown_control(self, control_req, usb_req):
+    def handle_device_specific_control(self, control_req, usb_req):
         raise(NotImplementedError)
         self.send_usb_ret(usb_req, ret, len(ret))
 

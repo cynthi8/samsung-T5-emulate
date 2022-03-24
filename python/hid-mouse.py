@@ -1,7 +1,7 @@
 import time
 import random
 import datetime
-from USBIP import BaseStructure, USBDevice, InterfaceDescriptor, DeviceDescriptor, DeviceConfiguration, EndPoint, USBContainer
+from USBIP import BaseStructure, USBDevice, InterfaceDescriptor, DeviceDescriptor, DeviceConfiguration, EndpointDescriptor, USBContainer
 
 
 # data event counter
@@ -38,7 +38,7 @@ interface_d = InterfaceDescriptor(bAlternateSetting=0,
                                   bInterfaceProtocol=2,
                                   iInterface=0)
 
-end_point = EndPoint(bEndpointAddress=0x81,
+end_point = EndpointDescriptor(bEndpointAddress=0x81,
                      bmAttributes=0x3,
                      wMaxPacketSize=0x0800,  # Little endian
                      bInterval=0xFF)  # interval to report
@@ -122,7 +122,7 @@ class USBHID(USBDevice):
             time.sleep(0.05)
         count = count + 1
 
-    def handle_unknown_control(self, control_req, usb_req):
+    def handle_device_specific_control(self, control_req, usb_req):
         if control_req.bmRequestType == 0x81:
             if control_req.bRequest == 0x6:  # Get Descriptor
                 if control_req.wValue == 0x22:  # send initial report
