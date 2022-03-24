@@ -13,8 +13,8 @@ samsung_T5_device_descriptor = DeviceDescriptor(bDeviceClass=0x0,
                                                 iSerialNumber=1,
                                                 bNumConfigurations=1)
 serial_number_string = "1234567B859B" # This was my T5 serial number, yours will be different
-manufacturer_string = ""
-product_string = ""
+manufacturer_string = "Samsung"
+product_string = "Portable SSD T5"
 
 samsung_T5_device_configuration = DeviceConfiguration(wTotalLength=0x0055,
                                                       bNumInterfaces=0x1,
@@ -83,6 +83,7 @@ class SamsungT5(USBDevice):
         self.send_usb_ret(usb_req, ret, len(ret))
 
     def handle_device_specific_control(self, control_req, usb_req):
+        handled = False
         if control_req.bmRequestType == 0x80:  # IN:STANDARD:DEVICE request
             if control_req.bRequest == 0x06:  # GET_DESCRIPTOR
                 descriptor_index, descriptor_type = control_req.wValue.to_bytes(length=2, byteorder='big')
@@ -97,8 +98,14 @@ class SamsungT5(USBDevice):
                     ret = bytearray([2 + len(ret_data), 0x03])
                     ret.extend(ret_data)
                     self.send_usb_ret(usb_req, ret, len(ret))
-                    return
-        raise(NotImplementedError)
+                    handled = True
+        elif control_req.bmRequestType == 0b1_01_00001:  # IN:CLASS:INTERFACE request
+            if control_req.bRequest == 0xFE:  # GET_MAX_LUN
+                ret = bytearray([0])
+                self.send_usb_ret(usb_req, ret, len(ret))
+                handled = True
+        if not handled:
+            raise(NotImplementedError)
 
 
 usb_dev = SamsungT5()
