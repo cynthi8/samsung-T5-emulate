@@ -12,6 +12,9 @@ samsung_T5_device_descriptor = DeviceDescriptor(bDeviceClass=0x0,
                                                 iProduct=3,
                                                 iSerialNumber=1,
                                                 bNumConfigurations=1)
+serial_number_string = "1234567B859B" # This was my T5 serial number, yours will be different
+manufacturer_string = ""
+product_string = ""
 
 samsung_T5_device_configuration = DeviceConfiguration(wTotalLength=0x0055,
                                                       bNumInterfaces=0x1,
@@ -62,13 +65,15 @@ UAS_endpoint_3 = EndpointDescriptor(bEndpointAddress=0x04, bmAttributes=0x02, wM
 UAS_endpoint_3.class_descriptor = PipeUsageClassSpecificDescriptor(bValue=0x0001)
 samsung_T5_interface_descriptor_UAS.endpoints = [UAS_endpoint_0, UAS_endpoint_1, UAS_endpoint_2, UAS_endpoint_3]
 
-samsung_T5_interface = [samsung_T5_interface_descriptor_BOT, samsung_T5_interface_descriptor_UAS] # List of interface alternatives
+samsung_T5_interface = [samsung_T5_interface_descriptor_BOT, samsung_T5_interface_descriptor_UAS]  # List of interface alternatives
 samsung_T5_device_configuration.interfaces = [samsung_T5_interface]
 
 
 class SamsungT5(USBDevice):
     configurations = [samsung_T5_device_configuration]  # Supports only one configuration
     device_descriptor = samsung_T5_device_descriptor
+    supported_langagues = [0x0409]  # Only supports English (United States)
+    device_strings = [None, serial_number_string, manufacturer_string, product_string]
 
     def __init__(self):
         super().__init__()
@@ -78,8 +83,23 @@ class SamsungT5(USBDevice):
         self.send_usb_ret(usb_req, ret, len(ret))
 
     def handle_device_specific_control(self, control_req, usb_req):
+        if control_req.bmRequestType == 0x80:  # IN:STANDARD:DEVICE request
+            if control_req.bRequest == 0x06:  # GET_DESCRIPTOR
+                descriptor_index, descriptor_type = control_req.wValue.to_bytes(length=2, byteorder='big')
+                if descriptor_type == 0x03:  # String Descriptor
+                    if descriptor_index == 0:
+                        # String Index 0 - List of supported languages
+                        ret_data = bytearray()
+                        for language in self.supported_langagues:
+                            ret_data.extend(language.to_bytes(length=2, byteorder='big'))
+                    else:
+                        ret_data = self.device_strings[descriptor_index].encode('utf_8')
+                    ret = bytearray([2 + len(ret_data), 0x03])
+                    ret.extend(ret_data)
+                    self.send_usb_ret(usb_req, ret, len(ret))
+                    return
         raise(NotImplementedError)
-        self.send_usb_ret(usb_req, ret, len(ret))
+
 
 usb_dev = SamsungT5()
 usb_container = USBContainer()
