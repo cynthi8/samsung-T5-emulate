@@ -1,4 +1,4 @@
-from USBIP import BaseStructure, USBDevice, USBContainer, DeviceDescriptor, DeviceConfiguration, BOSDescriptor, DeviceQualifierDescriptor, InterfaceDescriptor, EndpointDescriptor,
+from USBIP import BaseStructure, USBDevice, USBContainer, DeviceDescriptor, DeviceConfiguration, BOSDescriptor, DeviceQualifierDescriptor, InterfaceDescriptor, EndpointDescriptor
 
 
 samsung_T5_device_descriptor = DeviceDescriptor(bcdUSB=0x0210,
@@ -86,6 +86,7 @@ class SamsungT5(USBDevice):
     def __init__(self):
         super().__init__()
         self.data_recieved = []
+        self.interface_setting = 0  # Startup with Bulk Only Transport interface setting
 
     def handle_data(self, usb_req):
         if usb_req.direction == 0:  # USBIP_DIR_OUT
@@ -125,6 +126,14 @@ class SamsungT5(USBDevice):
                 ret = bytearray([0])
                 self.send_usb_ret(usb_req, ret, len(ret))
                 handled = True
+
+        elif control_req.bmRequestType == 0b0_00_00001:  # OUT:STANDARD:INTERFACE request
+            if control_req.bRequest == 0x0B:  # SET_INTERFACE
+                assert(control_req.wIndex == 0)  # Only 1 interface
+                self.interface_setting = control_req.wValue
+                self.send_usb_ret(usb_req, b'', 0)
+                handled = True
+
         if not handled:
             raise(NotImplementedError)
 
