@@ -3,6 +3,10 @@ import struct
 from abc import ABC, abstractmethod
 
 
+USBIP_DIR_OUT = 0
+USBIP_DIR_IN = 1
+
+
 class BaseStructure:
     def __init__(self, **kwargs):
         self.init_from_dict(**kwargs)
@@ -120,7 +124,7 @@ class USBIP_RET_Submit(BaseStructure):
         ('start_frame', 'I'),
         ('number_of_packets', 'I'),
         ('error_count', 'I'),
-        ('setup', 'Q')
+        ('padding', 'Q', 0)
     ]
 
     def pack(self):
@@ -257,7 +261,6 @@ class USBDevice(ABC):
                                                  actual_length=usb_len,
                                                  start_frame=0x0,
                                                  number_of_packets=0x0,
-                                                 interval=0x0,
                                                  data=usb_res).pack())
 
     def handle_get_descriptor(self, control_req, usb_req):
@@ -277,7 +280,7 @@ class USBDevice(ABC):
     def handle_set_configuration(self, control_req, usb_req):
         # Only supports 1 configuration
         print(f"handle_set_configuration {control_req.wValue:n}")
-        self.send_usb_ret(usb_req, b'', 0, 0)
+        self.send_usb_ret(usb_req, b'', 0)
         return True
 
     def handle_usb_control(self, usb_req):
@@ -322,6 +325,11 @@ class USBDevice(ABC):
     def handle_device_specific_control(self, usb_req):
         pass
 
+
+def bytes_to_string(bytes):
+    if bytes:
+        return ''.join(["\\x{0:02x}".format(val) for val in bytes])
+    return None
 
 class USBContainer:
     usb_devices = []
@@ -401,18 +409,21 @@ class USBContainer:
                     print('----------------')
                     print('handles requests')
                     cmd = USBIP_CMD_Submit()
-                    data = conn.recv(cmd.size())
-                    cmd.unpack(data)
+                    cmd_header_data = conn.recv(cmd.size())
+                    cmd.unpack(cmd_header_data)
+                    transfer_buffer = conn.recv(cmd.transfer_buffer_length) if cmd.direction == USBIP_DIR_OUT else None
                     print(f"usbip cmd {cmd.command:x}")
                     print(f"usbip seqnum {cmd.seqnum:x}")
                     print(f"usbip devid {cmd.devid:x}")
                     print(f"usbip direction {cmd.direction:x}")
                     print(f"usbip ep {cmd.ep:x}")
                     print(f"usbip flags {cmd.transfer_flags:x}")
+                    print(f"usbip transfer buffer length {cmd.transfer_buffer_length:x}")
+                    print(f"usbip start {cmd.start_frame:x}")
                     print(f"usbip number of packets {cmd.number_of_packets:x}")
                     print(f"usbip interval {cmd.interval:x}")
-                    print("usbip setup", ''.join(["\\x{0:02x}".format(val) for val in cmd.setup]))
-                    print(f"usbip buffer length {cmd.transfer_buffer_length:x}")
+                    print(f"usbip setup {bytes_to_string(cmd.setup)}")
+                    print(f"usbip transfer buffer {bytes_to_string(transfer_buffer)}")
                     usb_req = USBRequest(seqnum=cmd.seqnum,
                                          devid=cmd.devid,
                                          direction=cmd.direction,
@@ -421,7 +432,7 @@ class USBContainer:
                                          numberOfPackets=cmd.number_of_packets,
                                          interval=cmd.interval,
                                          setup=cmd.setup,
-                                         data=data)
+                                         transfer_buffer=transfer_buffer)
                     self.usb_devices[0].connection = conn
                     self.usb_devices[0].handle_usb_request(usb_req)
             print('Close connection\n')
