@@ -1,7 +1,8 @@
-from USBIP import BaseStructure, USBDevice, InterfaceDescriptor, DeviceDescriptor, DeviceConfiguration, EndpointDescriptor, USBContainer
+from USBIP import BaseStructure, USBDevice, USBContainer, DeviceDescriptor, DeviceConfiguration, BOSDescriptor, DeviceQualifierDescriptor, InterfaceDescriptor, EndpointDescriptor,
 
 
-samsung_T5_device_descriptor = DeviceDescriptor(bDeviceClass=0x0,
+samsung_T5_device_descriptor = DeviceDescriptor(bcdUSB=0x0210,
+                                                bDeviceClass=0x0,
                                                 bDeviceSubClass=0x0,
                                                 bDeviceProtocol=0x0,
                                                 bMaxPacketSize0=0x40,
@@ -22,6 +23,10 @@ samsung_T5_device_configuration = DeviceConfiguration(wTotalLength=0x0055,
                                                       iConfiguration=0x0,  # No string
                                                       bmAttributes=0x80,  # Valid self-powered
                                                       bMaxPower=250)  # 500 mA current
+
+
+samsung_T5_BOS_descriptor = BOSDescriptor(wTotalLength=0x002a, bNumDeviceCaps=0x03)
+samsung_T5_device_qualifier_descriptor = DeviceQualifierDescriptor(bcdUSB=samsung_T5_device_descriptor.bcdUSB, bDeviceClass=samsung_T5_device_descriptor.bDeviceClass, bDeviceSubClass=samsung_T5_device_descriptor.bDeviceSubClass, bDeviceProtocol=samsung_T5_device_descriptor.bDeviceProtocol, bMaxPacketSize0=samsung_T5_device_descriptor.bMaxPacketSize0, bNumConfigurations=samsung_T5_device_descriptor.bNumConfigurations)
 
 # BOT - Bulk Only Transport
 samsung_T5_interface_descriptor_BOT = InterfaceDescriptor(bAlternateSetting=0,
@@ -73,6 +78,8 @@ samsung_T5_device_configuration.interfaces = [samsung_T5_interface]
 class SamsungT5(USBDevice):
     configurations = [samsung_T5_device_configuration]
     device_descriptor = samsung_T5_device_descriptor
+    device_qualifier_descriptor = samsung_T5_device_qualifier_descriptor
+    BOS_descriptor = samsung_T5_BOS_descriptor
     supported_langagues = [0x0409]  # Only supports English (United States)
     device_strings = [None, serial_number_string, manufacturer_string, product_string]
 
@@ -104,6 +111,15 @@ class SamsungT5(USBDevice):
                     ret.extend(ret_data)
                     self.send_usb_ret(usb_req, ret, len(ret))
                     handled = True
+                elif descriptor_type == 0x06:  # Device Qualifier Descriptor
+                    ret = self.device_qualifier_descriptor.pack()
+                    self.send_usb_ret(usb_req, ret, len(ret))
+                    handled = True
+                elif descriptor_type == 0x0F:  # BOS Descriptor
+                    ret = self.BOS_descriptor.pack()
+                    self.send_usb_ret(usb_req, ret, len(ret))
+                    handled = True
+
         elif control_req.bmRequestType == 0b1_01_00001:  # IN:CLASS:INTERFACE request
             if control_req.bRequest == 0xFE:  # GET_MAX_LUN
                 ret = bytearray([0])

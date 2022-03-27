@@ -204,6 +204,31 @@ class DeviceConfiguration(BaseStructure):
     ]
 
 
+class BOSDescriptor(BaseStructure):
+    _byte_order_ = '<'
+    _fields_ = [
+        ('bLength', 'B', 0x05),
+        ('bDescriptorType', 'B', 0x0F),  # Binary Device Object Store (BOS) Descriptor
+        ('wTotalLength', 'H'),
+        ('bNumDeviceCaps', 'B'),
+    ]
+
+
+class DeviceQualifierDescriptor(BaseStructure):
+    _byte_order_ = '<'
+    _fields_ = [
+        ('bLength', 'B', 0x0a),
+        ('bDescriptorType', 'B', 0x06),  # Device Qualifier Descriptor
+        ('bcdUSB', 'H'),
+        ('bDeviceClass', 'B'),
+        ('bDeviceSubClass', 'B'),
+        ('bDeviceProtocol', 'B'),
+        ('bMaxPacketSize0', 'B'),
+        ('bNumConfigurations', 'B'),
+        ('bReserved', 'B', 0),
+    ]
+
+
 class InterfaceDescriptor(BaseStructure):
     _byte_order_ = '<'
     _fields_ = [
