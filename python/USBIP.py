@@ -116,13 +116,13 @@ class USBIP_RET_Submit(BaseStructure):
     _fields_ = [
         ('command', 'I'),
         ('seqnum', 'I'),
-        ('devid', 'I'),
-        ('direction', 'I'),
-        ('ep', 'I'),
+        ('devid', 'I', 0),
+        ('direction', 'I', 0),
+        ('ep', 'I', 0),
         ('status', 'I'),
         ('actual_length', 'I'),
-        ('start_frame', 'I'),
-        ('number_of_packets', 'I'),
+        ('start_frame', 'I', 0),
+        ('number_of_packets', 'I', 0xffffffff),
         ('error_count', 'I'),
         ('padding', 'Q', 0)
     ]
@@ -256,11 +256,8 @@ class USBDevice(ABC):
     def send_usb_ret(self, usb_req, usb_res, usb_len, status=0):
         self.connection.sendall(USBIP_RET_Submit(command=0x3,
                                                  seqnum=usb_req.seqnum,
-                                                 ep=0,
                                                  status=status,
                                                  actual_length=usb_len,
-                                                 start_frame=0x0,
-                                                 number_of_packets=0x0,
                                                  data=usb_res).pack())
 
     def handle_get_descriptor(self, control_req, usb_req):
