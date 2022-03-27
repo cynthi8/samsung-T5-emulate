@@ -12,7 +12,7 @@ samsung_T5_device_descriptor = DeviceDescriptor(bDeviceClass=0x0,
                                                 iProduct=3,
                                                 iSerialNumber=1,
                                                 bNumConfigurations=1)
-serial_number_string = "1234567B859B" # This was my T5 serial number, yours will be different
+serial_number_string = "1234567B859B"  # This was my T5 serial number, yours will be different
 manufacturer_string = "Samsung"
 product_string = "Portable SSD T5"
 
@@ -70,17 +70,22 @@ samsung_T5_device_configuration.interfaces = [samsung_T5_interface]
 
 
 class SamsungT5(USBDevice):
-    configurations = [samsung_T5_device_configuration]  # Supports only one configuration
+    configurations = [samsung_T5_device_configuration]
     device_descriptor = samsung_T5_device_descriptor
     supported_langagues = [0x0409]  # Only supports English (United States)
     device_strings = [None, serial_number_string, manufacturer_string, product_string]
 
     def __init__(self):
         super().__init__()
+        self.data_recieved = []
 
     def handle_data(self, usb_req):
-        raise(NotImplementedError)
-        self.send_usb_ret(usb_req, ret, len(ret))
+        if usb_req.direction == 0: # USBIP_DIR_OUT
+            self.data_recieved.append(usb_req.transfer_buffer)
+            self.send_usb_ret(usb_req, b'', 0)
+        elif usb_req.direction == 1: # USBIP_DIR_IN
+            raise(NotImplementedError)
+        
 
     def handle_device_specific_control(self, control_req, usb_req):
         handled = False
