@@ -14,7 +14,7 @@ samsung_T5_device_descriptor = DeviceDescriptor(bDeviceClass=0x0,
                                                 bNumConfigurations=1)
 serial_number_string = "1234567B859B"  # This was my T5 serial number, yours will be different
 manufacturer_string = "Samsung"
-product_string = "Portable SSD T5"
+product_string = "Portable SSD T5 (emulated)"
 
 samsung_T5_device_configuration = DeviceConfiguration(wTotalLength=0x0055,
                                                       bNumInterfaces=0x1,
@@ -99,7 +99,7 @@ class SamsungT5(USBDevice):
                         for language in self.supported_langagues:
                             ret_data.extend(language.to_bytes(length=2, byteorder='big'))
                     else:
-                        ret_data = self.device_strings[descriptor_index].encode('utf_8')
+                        ret_data = self.device_strings[descriptor_index].encode('utf-16')
                     ret = bytearray([2 + len(ret_data), 0x03])
                     ret.extend(ret_data)
                     self.send_usb_ret(usb_req, ret, len(ret))
