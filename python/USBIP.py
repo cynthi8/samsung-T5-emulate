@@ -7,7 +7,7 @@ USBIP_DIR_OUT = 0
 USBIP_DIR_IN = 1
 
 
-class BaseStructure:
+class BaseStructure(ABC):
     def __init__(self, **kwargs):
         self.init_from_dict(**kwargs)
         for field in self._fields_:
@@ -23,12 +23,10 @@ class BaseStructure:
         return struct.calcsize(self.format())
 
     def format(self):
-        pack_format = '>'
+        pack_format = self._byte_order_
         for field in self._fields_:
             if isinstance(field[1], BaseStructure):
                 pack_format += str(field[1].size()) + 's'
-            elif '<' in field[1]:
-                pack_format += field[1][1:]
             else:
                 pack_format += field[1]
         return pack_format
@@ -46,14 +44,21 @@ class BaseStructure:
         values = struct.unpack(self.format(), buf)
         keys_vals = {}
         for i, val in enumerate(values):
-            if '<' in self._fields_[i][1][0]:
-                val = struct.unpack('<' + self._fields_[i][1][1], struct.pack('>' + self._fields_[i][1][1], val))[0]
             keys_vals[self._fields_[i][0]] = val
 
         self.init_from_dict(**keys_vals)
 
+    @property
+    @abstractmethod
+    def _byte_order_(self): pass
+
+    @property
+    @abstractmethod
+    def _fields_(self): pass
+
 
 class USBIPHeader(BaseStructure):
+    _byte_order_ = '>'  # USBIP uses big-endian
     _fields_ = [
         ('version', 'H', 0x0111),  # USB/IP version 1.1.1
         ('command', 'H'),
@@ -62,6 +67,7 @@ class USBIPHeader(BaseStructure):
 
 
 class USBInterface(BaseStructure):
+    _byte_order_ = '>'
     _fields_ = [
         ('bInterfaceClass', 'B'),
         ('bInterfaceSubClass', 'B'),
@@ -71,6 +77,7 @@ class USBInterface(BaseStructure):
 
 
 class OP_REP_DevList(BaseStructure):
+    _byte_order_ = '>'
     _fields_ = [
         ('base', USBIPHeader()),
         ('nExportedDevice', 'I'),
@@ -93,6 +100,7 @@ class OP_REP_DevList(BaseStructure):
 
 
 class OP_REP_Import(BaseStructure):
+    _byte_order_ = '>'
     _fields_ = [
         ('base', USBIPHeader()),
         ('usbPath', '256s'),
@@ -113,6 +121,7 @@ class OP_REP_Import(BaseStructure):
 
 
 class USBIP_RET_Submit(BaseStructure):
+    _byte_order_ = '>'
     _fields_ = [
         ('command', 'I'),
         ('seqnum', 'I'),
@@ -134,6 +143,7 @@ class USBIP_RET_Submit(BaseStructure):
 
 
 class USBIP_CMD_Submit(BaseStructure):
+    _byte_order_ = '>'
     _fields_ = [
         ('command', 'I'),
         ('seqnum', 'I'),
@@ -150,20 +160,22 @@ class USBIP_CMD_Submit(BaseStructure):
 
 
 class StandardDeviceRequest(BaseStructure):
+    _byte_order_ = '<'  # USB uses little-endian
     _fields_ = [
         ('bmRequestType', 'B'),
         ('bRequest', 'B'),
         ('wValue', 'H'),
         ('wIndex', 'H'),
-        ('wLength', '<H')
+        ('wLength', 'H')
     ]
 
 
 class DeviceDescriptor(BaseStructure):
+    _byte_order_ = '<'
     _fields_ = [
         ('bLength', 'B', 18),
         ('bDescriptorType', 'B', 1),
-        ('bcdUSB', 'H', 0x1001),
+        ('bcdUSB', 'H', 0x0110),
         ('bDeviceClass', 'B'),
         ('bDeviceSubClass', 'B'),
         ('bDeviceProtocol', 'B'),
@@ -179,6 +191,7 @@ class DeviceDescriptor(BaseStructure):
 
 
 class DeviceConfiguration(BaseStructure):
+    _byte_order_ = '<'
     _fields_ = [
         ('bLength', 'B', 9),
         ('bDescriptorType', 'B', 2),
@@ -192,6 +205,7 @@ class DeviceConfiguration(BaseStructure):
 
 
 class InterfaceDescriptor(BaseStructure):
+    _byte_order_ = '<'
     _fields_ = [
         ('bLength', 'B', 9),
         ('bDescriptorType', 'B', 4),
@@ -206,6 +220,7 @@ class InterfaceDescriptor(BaseStructure):
 
 
 class EndpointDescriptor(BaseStructure):
+    _byte_order_ = '<'
     _fields_ = [
         ('bLength', 'B', 7),
         ('bDescriptorType', 'B', 0x5),
@@ -254,6 +269,7 @@ class USBDevice(ABC):
         self.all_configurations = all_configurations
 
     def send_usb_ret(self, usb_req, usb_res, usb_len, status=0):
+        print(f'Sending {bytes_to_string(usb_res)}')
         self.connection.sendall(USBIP_RET_Submit(command=0x3,
                                                  seqnum=usb_req.seqnum,
                                                  status=status,
@@ -262,12 +278,13 @@ class USBDevice(ABC):
 
     def handle_get_descriptor(self, control_req, usb_req):
         handled = False
-        print(f"handle_get_descriptor {control_req.wValue:n}")
-        if control_req.wValue == 0x01:  # Device Descriptor
+        descriptor_type, descriptor_index = control_req.wValue.to_bytes(length=2, byteorder='big')
+        print(f"handle_get_descriptor {descriptor_type:n} {descriptor_index:n}")
+        if descriptor_type == 0x01:  # Device Descriptor
             handled = True
             ret = self.device_descriptor.pack()
             self.send_usb_ret(usb_req, ret, len(ret))
-        elif control_req.wValue == 0x02:  # Configuration Descriptor
+        elif descriptor_type == 0x02:  # Configuration Descriptor
             handled = True
             ret = self.all_configurations[:control_req.wLength]
             self.send_usb_ret(usb_req, ret, len(ret))
@@ -327,6 +344,7 @@ def bytes_to_string(bytes):
     if bytes:
         return ''.join(["\\x{0:02x}".format(val) for val in bytes])
     return None
+
 
 class USBContainer:
     usb_devices = []

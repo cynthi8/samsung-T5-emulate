@@ -48,6 +48,7 @@ class PipeUsageClassSpecificDescriptor(BaseStructure):
     I think this is the Pipe Usage Class Specific Descriptor, but I don't have access to 
     "USB Attached SCSI (UAS) T10/2095-D" which describes it. Wireshark also doesn't know.
     '''
+    _byte_order_ = '<'
     _fields_ = [
         ('bLength', 'B', 4),
         ('bDescriptorType', 'B', 0x24),  # Pipe Usage Class Specific Descriptor
@@ -80,18 +81,17 @@ class SamsungT5(USBDevice):
         self.data_recieved = []
 
     def handle_data(self, usb_req):
-        if usb_req.direction == 0: # USBIP_DIR_OUT
+        if usb_req.direction == 0:  # USBIP_DIR_OUT
             self.data_recieved.append(usb_req.transfer_buffer)
             self.send_usb_ret(usb_req, b'', 0)
-        elif usb_req.direction == 1: # USBIP_DIR_IN
+        elif usb_req.direction == 1:  # USBIP_DIR_IN
             raise(NotImplementedError)
-        
 
     def handle_device_specific_control(self, control_req, usb_req):
         handled = False
         if control_req.bmRequestType == 0x80:  # IN:STANDARD:DEVICE request
             if control_req.bRequest == 0x06:  # GET_DESCRIPTOR
-                descriptor_index, descriptor_type = control_req.wValue.to_bytes(length=2, byteorder='big')
+                descriptor_type, descriptor_index = control_req.wValue.to_bytes(length=2, byteorder='big')
                 if descriptor_type == 0x03:  # String Descriptor
                     if descriptor_index == 0:
                         # String Index 0 - List of supported languages

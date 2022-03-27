@@ -13,6 +13,7 @@ count = 0
 
 
 class HIDDescriptor(BaseStructure):
+    _byte_order_ = '<'
     _fields_ = [
         ('bLength', 'B', 9),
         ('bDescriptorType', 'B', 0x21),  # HID
@@ -24,11 +25,11 @@ class HIDDescriptor(BaseStructure):
     ]
 
 
-hid_descriptor = HIDDescriptor(bcdHID=0x0100,  # Mouse
+hid_descriptor = HIDDescriptor(bcdHID=0x0001,  # Mouse
                      bCountryCode=0x0,
                      bNumDescriptors=0x1,
                      bDescriptorType1=0x22,  # Report
-                     wDescriptionLength=0x3400)  # Little endian
+                     wDescriptionLength=0x0034)
 
 
 interface_d = InterfaceDescriptor(bAlternateSetting=0,
@@ -40,19 +41,19 @@ interface_d = InterfaceDescriptor(bAlternateSetting=0,
 
 end_point = EndpointDescriptor(bEndpointAddress=0x81,
                      bmAttributes=0x3,
-                     wMaxPacketSize=0x0800,  # Little endian
+                     wMaxPacketSize=0x0008, 
                      bInterval=0xFF)  # interval to report
 
 mouse_device_descriptor = DeviceDescriptor(bDeviceClass=0x0,
                                            bDeviceSubClass=0x0,
                                            bDeviceProtocol=0x0,
                                            bMaxPacketSize0=0x8,
-                                           idVendor=0x0627,
+                                           idVendor=0x2706,
                                            idProduct=0x0,
                                            bcdDevice=0x0,
                                            bNumConfigurations=1)
 
-configuration = DeviceConfiguration(wTotalLength=0x2200,
+configuration = DeviceConfiguration(wTotalLength=0x0022,
                                     bNumInterfaces=0x1,
                                     bConfigurationValue=1,
                                     iConfiguration=0x0,  # No string
@@ -125,7 +126,8 @@ class USBHID(USBDevice):
     def handle_device_specific_control(self, control_req, usb_req):
         if control_req.bmRequestType == 0x81:
             if control_req.bRequest == 0x6:  # Get Descriptor
-                if control_req.wValue == 0x22:  # send initial report
+                descriptor_type, descriptor_index = control_req.wValue.to_bytes(length=2, byteorder='big')
+                if descriptor_type == 0x22:  # send initial report
                     print('send initial report')
                     ret = self.generate_mouse_report()
                     self.send_usb_ret(usb_req, ret, len(ret))
